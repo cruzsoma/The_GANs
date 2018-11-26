@@ -3,6 +3,7 @@ import numpy as np
 import glob
 import os
 from imageio import imread, imsave, mimsave
+from tools.gif import generate_gif
 
 from scipy.misc import imresize
 
@@ -15,6 +16,7 @@ IMAGE_HEIGHT = 64
 
 total_steps = 500
 
+MODEL_NAME = 'DCGAN'
 MODELS_DIR = 'models/DCGAN'
 if not os.path.exists(MODELS_DIR):
     os.makedirs(MODELS_DIR)
@@ -128,11 +130,6 @@ with tf.control_dependencies(update_ops):
     optimizer_dis = tf.train.AdamOptimizer(learning_rate=learning_rate, beta1=beta1).minimize(loss_dis, global_step=global_step, var_list=variables_dis)
     optimizer_gen = tf.train.AdamOptimizer(learning_rate=learning_rate, beta1=beta1).minimize(loss_gen, var_list=variables_gen)
 
-# variables_to_restore = []
-# for variable in tf.global_variables():
-#     if variable.name.startswith('discriminator') or variable.name.startswith('generator'):
-#         variables_to_restore.append(variable)
-# saver = tf.train.Saver(variables_to_restore, write_version=tf.train.SaverDef.V2)
 saver = tf.train.Saver(write_version=tf.train.SaverDef.V2)
 
 sess = tf.Session()
@@ -162,11 +159,10 @@ for i in range(step, 60000):
     sess.run(optimizer_dis, feed_dict={X: batch, noise: train_noise, is_training: True})
     sess.run(optimizer_gen, feed_dict={X: batch, noise: train_noise, is_training: True})
     sess.run(optimizer_gen, feed_dict={X: batch, noise: train_noise, is_training: True})
-    # step = sess.run(global_step)
+
     if i % 10 == 0:
         tf.logging.info('step: %d,  Discriminator Loss %f, Generator Loss %f' % (i, dis_ls, gen_ls))
     if i % 50 == 0:
-        # print(i, dis_ls, gen_ls)
         generated_images = sess.run(gen, feed_dict={noise: noise_image, is_training: False})
         generated_images = (generated_images + 1) / 2
         generated_images = combine_images([img[:, : , :] for img in generated_images])
@@ -176,4 +172,4 @@ for i in range(step, 60000):
 
 tf.logging.info('Done DCGAN training')
 saver.save(sess, os.path.join(MODELS_DIR, 'dcgan.ckpt'), global_step=total_steps)
-mimsave(os.path.join(MODELS_DIR, IMAGE_GEN_FOLDER, 'samples.gif'), samples, fps=10)
+generate_gif(MODEL_NAME, skip_count=20, fps=10)
